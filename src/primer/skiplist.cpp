@@ -19,17 +19,18 @@
 #include <vector>
 #include "common/macros.h"
 #include "fmt/core.h"
+#include <iostream>
 
 namespace bustub {
 
 /** @brief Checks whether the container is empty. */
 SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::Empty() -> bool {
-  UNIMPLEMENTED("TODO(P0): Add implementation.");
+  return header_->Next(LOWEST_LEVEL) == nullptr;
 }
 
 /** @brief Returns the number of elements in the skip list. */
 SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::Size() -> size_t {
-  UNIMPLEMENTED("TODO(P0): Add implementation.");
+  return size_;  
 }
 
 /**
@@ -57,7 +58,7 @@ SKIPLIST_TEMPLATE_ARGUMENTS void SkipList<K, Compare, MaxHeight, Seed>::Drop() {
  * Note: You might want to use the provided `Drop` helper function.
  */
 SKIPLIST_TEMPLATE_ARGUMENTS void SkipList<K, Compare, MaxHeight, Seed>::Clear() {
-  UNIMPLEMENTED("TODO(P0): Add implementation.");
+  this->Drop();
 }
 
 /**
@@ -69,7 +70,30 @@ SKIPLIST_TEMPLATE_ARGUMENTS void SkipList<K, Compare, MaxHeight, Seed>::Clear() 
  * @return true if the insertion is successful, false if the key already exists.
  */
 SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::Insert(const K &key) -> bool {
-  UNIMPLEMENTED("TODO(P0): Add implementation.");
+  size_t random_height = RandomHeight();
+  std::shared_ptr<SkipNode> new_node = std::make_shared<SkipNode>(random_height, key);
+
+  std::vector<std::shared_ptr<SkipNode>> update(MaxHeight, nullptr);
+  std::shared_ptr<SkipNode> current = header_;
+  for (int i = MaxHeight - 1; i >= 0; --i) {
+    while (current->Next(i) != nullptr && compare_(current->Next(i)->Key(), key)) {
+      if (!compare_(key, current->Key()) && !compare_(current->Key(), key)) {
+        return false;  // Found the key.
+      }
+      if (compare_(key, current->Key())) {
+        break;  // Key is less than current node's key, move to the next level.
+      }
+      current = current->Next(i);
+    }
+    update[i] = current;  // Store the last node before the insertion point.
+  }
+
+  for (int i = random_height-1; i >= 0 ; i--) {
+      new_node->SetNext(i, update[i]->Next(i));
+      update[i]->SetNext(i,new_node);
+  }
+  size_ += 1;
+  return true;
 }
 
 /**
@@ -79,7 +103,22 @@ SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::Insert(c
  * @return bool true if the element got erased, false otherwise.
  */
 SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::Erase(const K &key) -> bool {
-  UNIMPLEMENTED("TODO(P0): Add implementation.");
+  if( not Contains(key)) {
+    return false;
+  }
+  for (size_t i = MaxHeight-1; i >= 0 ; i--) {
+    auto node = Header();
+    while (node != nullptr) {
+      if (!compare_(key, node->Next(i)->Key()) && !compare_(node->Next(i)->Key(), key)) {
+        node->SetNext(i, node->Next(i)->Next(i));
+      }
+      if (compare_(key, node->Key())) {
+        break;  // Key is less than current node's key, move to the next level.
+      }
+      node = node->Next(i);  // Move to the next node at this level.
+    }
+  }
+  return true;
 }
 
 /**
@@ -91,7 +130,19 @@ SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::Erase(co
 SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::Contains(const K &key) -> bool {
   // Following the standard library: Key `a` and `b` are considered equivalent if neither compares less
   // than the other: `!compare_(a, b) && !compare_(b, a)`.
-  UNIMPLEMENTED("TODO(P0): Add implementation.");
+  for (size_t i = MaxHeight-1; i >= 0 ; i--) {
+    auto node = header_->Next(i);
+    while (node != nullptr) {
+      if (!compare_(key, node->Key()) && !compare_(node->Key(), key)) {
+        return true;  // Found the key.
+      }
+      if (compare_(key, node->Key())) {
+        break;  // Key is less than current node's key, move to the next level.
+      }
+      node = node->Next(i);  // Move to the next node at this level.
+    }
+  }
+  return false;
 }
 
 /**
@@ -126,7 +177,7 @@ SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::RandomHe
  * @brief Gets the current node height.
  */
 SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::SkipNode::Height() const -> size_t {
-  UNIMPLEMENTED("TODO(P0): Add implementation.");
+  return links_.size();
 }
 
 /**
@@ -137,7 +188,7 @@ SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::SkipNode
  */
 SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::SkipNode::Next(size_t level) const
     -> std::shared_ptr<SkipNode> {
-  UNIMPLEMENTED("TODO(P0): Add implementation.");
+  return links_[level];
 }
 
 /**
@@ -147,12 +198,12 @@ SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::SkipNode
  */
 SKIPLIST_TEMPLATE_ARGUMENTS void SkipList<K, Compare, MaxHeight, Seed>::SkipNode::SetNext(
     size_t level, const std::shared_ptr<SkipNode> &node) {
-  UNIMPLEMENTED("TODO(P0): Add implementation.");
+  links_[level] = std::move(node);
 }
 
 /** @brief Returns a reference to the key stored in the node. */
 SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::SkipNode::Key() const -> const K & {
-  UNIMPLEMENTED("TODO(P0): Add implementation.");
+  return key_;
 }
 
 // Below are explicit instantiation of template classes.
@@ -162,3 +213,26 @@ template class SkipList<int, std::greater<>>;
 template class SkipList<int, std::less<>, 8>;
 
 }  // namespace bustub
+
+// using namespace bustub;
+
+// int main() {
+//   SkipList<int> list;
+
+//   // All the keys we will insert into the skip list (1 to 20).
+//   std::vector<int> keys = {12, 16, 2, 6, 15, 8, 13, 1, 11, 14, 0, 4, 19, 10, 9, 5, 7, 3, 17, 18};
+
+//   // Heights of the nodes in the skip list.
+//   // These will not change since we fixed the seed of the random number generator.
+//   std::vector<uint32_t> heights = {2, 1, 1, 1, 2, 1, 1, 1, 2, 1, 2, 1, 3, 1, 1, 2, 1, 1, 2, 3};
+
+//   // Insert the keys
+//   for (auto key : keys) {
+//     list.Insert(key);
+//   }
+
+//   // Sort the keys
+//   std::sort(keys.begin(), keys.end());
+
+//   list.Print(); 
+// }
