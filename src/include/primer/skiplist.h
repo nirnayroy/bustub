@@ -47,7 +47,7 @@ class SkipList {
   /**  @brief Constructs an empty skip list with an optional custom comparison function. */
   explicit SkipList(const Compare &compare = Compare{}) { 
     header_ = std::make_shared<SkipNode>(MaxHeight);
-    header_->SetNext(0, nullptr);
+    header_->SetNext(LOWEST_LEVEL, nullptr);
   }
 
   /**

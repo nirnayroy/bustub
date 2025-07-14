@@ -58,6 +58,7 @@ SKIPLIST_TEMPLATE_ARGUMENTS void SkipList<K, Compare, MaxHeight, Seed>::Drop() {
  * Note: You might want to use the provided `Drop` helper function.
  */
 SKIPLIST_TEMPLATE_ARGUMENTS void SkipList<K, Compare, MaxHeight, Seed>::Clear() {
+  size_=0;
   this->Drop();
 }
 
@@ -72,22 +73,45 @@ SKIPLIST_TEMPLATE_ARGUMENTS void SkipList<K, Compare, MaxHeight, Seed>::Clear() 
 SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::Insert(const K &key) -> bool {
   size_t random_height = RandomHeight();
   std::shared_ptr<SkipNode> new_node = std::make_shared<SkipNode>(random_height, key);
-
   std::vector<std::shared_ptr<SkipNode>> update(MaxHeight, nullptr);
   std::shared_ptr<SkipNode> current = header_;
+  if (key == header_->Key()){
+    if (current->Next(LOWEST_LEVEL) == nullptr){
+      for (int i = random_height-1; i >= 0 ; i--) 
+{      new_node->SetNext(i, header_->Next(i));
+      header_->SetNext(i,new_node);
+}
+      size_ += 1;
+      return true;
+    }
+    else if (!compare_(0, current->Next(LOWEST_LEVEL)->Key()) && !compare_(current->Next(LOWEST_LEVEL)->Key(), 0)){
+    return false;}
+    else {
+      for (int i = random_height-1; i >= 0 ; i--) 
+{      new_node->SetNext(i, header_->Next(i));
+      header_->SetNext(i,new_node);
+}
+      size_ += 1;
+  return true;
+    }  // Found the key.
+
+  }
+
   for (int i = MaxHeight - 1; i >= 0; --i) {
-    while (current->Next(i) != nullptr && compare_(current->Next(i)->Key(), key)) {
-      if (!compare_(key, current->Key()) && !compare_(current->Key(), key)) {
-        return false;  // Found the key.
-      }
-      if (compare_(key, current->Key())) {
+
+    while (current->Next(i) != nullptr && !compare_(key, current->Next(i)->Key())) {
+    if (compare_(key, current->Key())) {
         break;  // Key is less than current node's key, move to the next level.
       }
       current = current->Next(i);
     }
     update[i] = current;  // Store the last node before the insertion point.
   }
-
+  for (int i = MaxHeight - 1; i >= 0; --i) {
+    current = update[i];
+    if (!compare_(key, current->Key()) && !compare_(current->Key(), key)) {
+        return false;  // Found the key.
+      }}
   for (int i = random_height-1; i >= 0 ; i--) {
       new_node->SetNext(i, update[i]->Next(i));
       update[i]->SetNext(i,new_node);
@@ -106,7 +130,7 @@ SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::Erase(co
   if( not Contains(key)) {
     return false;
   }
-  for (size_t i = MaxHeight-1; i >= 0 ; i--) {
+  for (int i = MaxHeight-1; i >= 0 ; i--) {
     auto node = Header();
     while (node != nullptr) {
       if (!compare_(key, node->Next(i)->Key()) && !compare_(node->Next(i)->Key(), key)) {
@@ -130,7 +154,7 @@ SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::Erase(co
 SKIPLIST_TEMPLATE_ARGUMENTS auto SkipList<K, Compare, MaxHeight, Seed>::Contains(const K &key) -> bool {
   // Following the standard library: Key `a` and `b` are considered equivalent if neither compares less
   // than the other: `!compare_(a, b) && !compare_(b, a)`.
-  for (size_t i = MaxHeight-1; i >= 0 ; i--) {
+  for (int i = MaxHeight-1; i >= 0 ; i--) {
     auto node = header_->Next(i);
     while (node != nullptr) {
       if (!compare_(key, node->Key()) && !compare_(node->Key(), key)) {
